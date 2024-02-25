@@ -46,14 +46,23 @@ public class Command<T extends Team, U extends IridiumUser<T>> {
         this.enabled = true;
     }
 
+
     public CooldownProvider<CommandSender> getCooldownProvider() {
         if (cooldownProvider == null) {
             this.cooldownProvider = new CooldownProvider<>(Duration.ofSeconds(cooldownInSeconds));
         }
+
         return cooldownProvider;
     }
 
+
     public boolean execute(CommandSender sender, String[] arguments, IridiumTeams<T, U> iridiumTeams) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(StringUtils.color(iridiumTeams.getMessages().mustBeAPlayer
+                    .replace("%prefix%", iridiumTeams.getConfiguration().prefix))
+            );
+            return false;
+        }
         return execute(iridiumTeams.getUserManager().getUser((OfflinePlayer) sender), arguments, iridiumTeams);
     }
 

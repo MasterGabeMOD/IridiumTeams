@@ -37,6 +37,17 @@ public class CommandTest {
         MockBukkit.unmock();
     }
 
+    @Test
+    public void executeCommand__NotAPlayer() {
+        ConsoleCommandSenderMock commandSender = new ConsoleCommandSenderMock();
+
+        command.execute(commandSender, new String[]{}, TestPlugin.getInstance());
+
+        commandSender.assertSaid(StringUtils.color(TestPlugin.getInstance().getMessages().mustBeAPlayer
+                .replace("%prefix%", TestPlugin.getInstance().getConfiguration().prefix))
+        );
+        commandSender.assertNoMoreSaid();
+    }
 
     @Test
     public void executeCommand__DontHaveTeam() {
