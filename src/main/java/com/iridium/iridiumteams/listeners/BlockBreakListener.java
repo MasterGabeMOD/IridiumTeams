@@ -9,6 +9,7 @@ import com.iridium.iridiumteams.database.Team;
 import com.iridium.iridiumteams.database.TeamBlock;
 import com.iridium.iridiumteams.database.TeamSpawners;
 import lombok.AllArgsConstructor;
+import org.bukkit.Bukkit;
 import org.bukkit.block.Block;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.entity.Player;
@@ -51,18 +52,22 @@ public class BlockBreakListener<T extends Team, U extends IridiumUser<T>> implem
     }
 
     private void handleBlockBreakForMissionsAndCounts(U user, Block block) {
-        XMaterial material = XMaterial.matchXMaterial(block.getType());
-        iridiumTeams.getTeamManager().getTeamViaID(user.getTeamID()).ifPresent(team -> {
-            iridiumTeams.getMissionManager().handleMissionUpdate(team, block.getLocation().getWorld(), "MINE", material.name(), 1);
-            
-            TeamBlock teamBlock = iridiumTeams.getTeamManager().getTeamBlock(team, material);
-            teamBlock.setAmount(Math.max(0, teamBlock.getAmount() - 1));
+        Bukkit.getScheduler().runTaskAsynchronously(iridiumTeams, () -> {
+            XMaterial material = XMaterial.matchXMaterial(block.getType());
+            Bukkit.getScheduler().runTask(iridiumTeams, () -> {
+                iridiumTeams.getTeamManager().getTeamViaID(user.getTeamID()).ifPresent(team -> {
+                    iridiumTeams.getMissionManager().handleMissionUpdate(team, block.getLocation().getWorld(), "MINE", material.name(), 1);
+                    
+                    TeamBlock teamBlock = iridiumTeams.getTeamManager().getTeamBlock(team, material);
+                    teamBlock.setAmount(Math.max(0, teamBlock.getAmount() - 1));
 
-            if (block.getState() instanceof CreatureSpawner) {
-                CreatureSpawner creatureSpawner = (CreatureSpawner) block.getState();
-                TeamSpawners teamSpawners = iridiumTeams.getTeamManager().getTeamSpawners(team, creatureSpawner.getSpawnedType());
-                teamSpawners.setAmount(Math.max(0, teamSpawners.getAmount() - 1));
-            }
+                    if (block.getState() instanceof CreatureSpawner) {
+                        CreatureSpawner creatureSpawner = (CreatureSpawner) block.getState();
+                        TeamSpawners teamSpawners = iridiumTeams.getTeamManager().getTeamSpawners(team, creatureSpawner.getSpawnedType());
+                        teamSpawners.setAmount(Math.max(0, teamSpawners.getAmount() - 1));
+                    }
+                });
+            });
         });
     }
 }
