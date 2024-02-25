@@ -9,6 +9,9 @@ import com.iridium.iridiumteams.database.Team;
 import com.iridium.iridiumteams.database.TeamBlock;
 import com.iridium.iridiumteams.database.TeamSpawners;
 import lombok.AllArgsConstructor;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -21,6 +24,13 @@ import java.util.Optional;
 @AllArgsConstructor
 public class BlockPlaceListener<T extends Team, U extends IridiumUser<T>> implements Listener {
     private final IridiumTeams<T, U> iridiumTeams;
+    private final String cannotPlaceBlocksMessage;
+
+    public BlockPlaceListener(IridiumTeams<T, U> iridiumTeams) {
+        this.iridiumTeams = iridiumTeams;
+        this.cannotPlaceBlocksMessage = StringUtils.color(iridiumTeams.getMessages().cannotPlaceBlocks
+                .replace("%prefix%", iridiumTeams.getConfiguration().prefix));
+    }
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
@@ -31,32 +41,33 @@ public class BlockPlaceListener<T extends Team, U extends IridiumUser<T>> implem
 
         Player player = event.getPlayer();
         U user = iridiumTeams.getUserManager().getUser(player);
-        Optional<T> team = iridiumTeams.getTeamManager().getTeamViaLocation(event.getBlock().getLocation());
+        Location blockLocation = event.getBlock().getLocation();
+        Optional<T> teamOpt = iridiumTeams.getTeamManager().getTeamViaLocation(blockLocation);
 
-        if (team.isPresent()) {
-            if (!iridiumTeams.getTeamManager().getTeamPermission(team.get(), user, PermissionType.BLOCK_PLACE)) {
-                player.sendMessage(StringUtils.color(iridiumTeams.getMessages().cannotPlaceBlocks
-                        .replace("%prefix%", iridiumTeams.getConfiguration().prefix)
-                ));
+        teamOpt.ifPresentOrElse(team -> {
+            if (!iridiumTeams.getTeamManager().getTeamPermission(team, user, PermissionType.BLOCK_PLACE)) {
+                player.sendMessage(cannotPlaceBlocksMessage);
                 event.setCancelled(true);
             }
-        } else {
-            iridiumTeams.getTeamManager().handleBlockPlaceOutsideTerritory(event);
-        }
+        }, () -> iridiumTeams.getTeamManager().handleBlockPlaceOutsideTerritory(event));
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     public void monitorBlockPlace(BlockPlaceEvent event) {
         U user = iridiumTeams.getUserManager().getUser(event.getPlayer());
-        XMaterial material = XMaterial.matchXMaterial(event.getBlock().getType());
-        iridiumTeams.getTeamManager().getTeamViaID(user.getTeamID()).ifPresent(team -> {
-            iridiumTeams.getMissionManager().handleMissionUpdate(team, event.getBlock().getLocation().getWorld(), "PLACE", material.name(), 1);
-        });
-        iridiumTeams.getTeamManager().getTeamViaLocation(event.getBlock().getLocation()).ifPresent(team -> {
+        Material blockType = event.getBlock().getType();
+        XMaterial material = XMaterial.matchXMaterial(blockType);
+        Location blockLocation = event.getBlock().getLocation();
+        World world = blockLocation.getWorld();
+
+        iridiumTeams.getTeamManager().getTeamViaID(user.getTeamID())
+                .ifPresent(team -> iridiumTeams.getMissionManager().handleMissionUpdate(team, world, "PLACE", material.name(), 1));
+
+        iridiumTeams.getTeamManager().getTeamViaLocation(blockLocation).ifPresent(team -> {
             TeamBlock teamBlock = iridiumTeams.getTeamManager().getTeamBlock(team, material);
             teamBlock.setAmount(teamBlock.getAmount() + 1);
 
-            if (event.getBlock().getState() instanceof CreatureSpawner) {
+            if (blockType == Material.SPAWNER) {
                 CreatureSpawner creatureSpawner = (CreatureSpawner) event.getBlock().getState();
                 TeamSpawners teamSpawners = iridiumTeams.getTeamManager().getTeamSpawners(team, creatureSpawner.getSpawnedType());
                 teamSpawners.setAmount(teamSpawners.getAmount() + 1);
@@ -64,3 +75,4 @@ public class BlockPlaceListener<T extends Team, U extends IridiumUser<T>> implem
         });
     }
 }
+

@@ -30,8 +30,8 @@ public class AboutCommandTest {
         serverMock.dispatchCommand(playerMock, "test about");
         playerMock.assertSaid(StringUtils.color("&7Plugin Name: &cIridiumTest"));
         playerMock.assertSaid(StringUtils.color("&7Plugin Version: &c" + TestPlugin.getInstance().getDescription().getVersion()));
-        playerMock.assertSaid(StringUtils.color("&7Plugin Author: &cPeaches_MLG"));
-        playerMock.assertSaid(StringUtils.color("&7Plugin Donations: &cwww.patreon.com/Peaches_MLG"));
+        playerMock.assertSaid(StringUtils.color("&7Plugin Author: &cur mom"));
+        playerMock.assertSaid(StringUtils.color("&7Plugin Donations: &cstore.alanbecker.net"));
         playerMock.assertNoMoreSaid();
     }
 }
